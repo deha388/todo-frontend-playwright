@@ -99,46 +99,43 @@ jobs:
         script: |
           echo "🚀 Starting deployment to production K3s cluster..."
           
-          # Memory monitoring
-          echo "💾 Memory before deployment: $(free -h | awk '/^Mem:/{printf "%s used, %s available", $3, $7}')"
+          # System status check
+          echo "💾 Memory: $(free -h | awk '/^Mem:/{printf "%s used, %s available", $3, $7}')"
+          echo "✅ Prerequisites: Docker $(docker --version | cut -d' ' -f3), K3s $(k3s kubectl version --client --short | cut -d' ' -f3), Git OK"
           
-          # Verify prerequisites are installed
-          echo "✅ Checking prerequisites..."
-          docker --version
-          k3s kubectl version --client
-          git --version
-          
-          # Update project on server (fix path)
+          # Update project on server (quiet mode)
           cd /root
           rm -rf todo-frontend-playwright || true
-          git clone https://github.com/deha388/todo-frontend-playwright.git
+          git clone --quiet https://github.com/deha388/todo-frontend-playwright.git
           cd todo-frontend-playwright
           
           # Build Docker image with memory optimization
           echo "🏗️ Building Docker image (memory optimized)..."
           
           # Free maximum memory before build
-          docker system prune -af --volumes
-          sync && echo 3 > /proc/sys/vm/drop_caches  # Clear system cache
+          echo "🧹 Cleaning Docker cache..."
+          docker system prune -af --volumes > /dev/null 2>&1
+          sync && echo 3 > /proc/sys/vm/drop_caches
           
-          # Build with memory constraints and parallel limits
+          # Build with memory constraints (remove unsupported --cpus flag)
           DOCKER_BUILDKIT=0 docker build \
             --memory=300m \
             --memory-swap=600m \
-            --cpus="0.8" \
+            --quiet \
             -t todo-frontend:${{ github.sha }} . || {
-            echo "❌ Memory constrained build failed, trying minimal build..."
-            docker system prune -af
+            echo "❌ Build failed, retrying..."
+            docker system prune -af > /dev/null 2>&1
             DOCKER_BUILDKIT=0 docker build --no-cache -t todo-frontend:${{ github.sha }} .
           }
           
           docker tag todo-frontend:${{ github.sha }} todo-frontend:latest
           
           # Immediate cleanup after build to free memory
-          docker system prune -f
+          echo "🧹 Post-build cleanup..."
+          docker system prune -f > /dev/null 2>&1
           sync && echo 1 > /proc/sys/vm/drop_caches
           
-          echo "💾 Memory after build: $(free -h | awk '/^Mem:/{print $7}') available"
+          echo "💾 Available memory: $(free -h | awk '/^Mem:/{print $7}')"
           
           # Update k8s manifest with new image
           echo "📝 Updating image in manifest..."
@@ -152,17 +149,12 @@ jobs:
           echo "⏳ Waiting for rollout..."
           k3s kubectl rollout status deployment/todo-frontend --timeout=300s
           
-          # Show deployment info
-          echo "📋 Deployment info:"
-          k3s kubectl get pods
-          k3s kubectl get service todo-frontend-service
+          # Show deployment summary
+          echo "📋 Deployment status:"
+          k3s kubectl get pods --no-headers | grep todo-frontend
           
-          echo "✅ K3s deployment completed!"
-          echo "🌐 Access: http://${{ secrets.DO_HOST }}:30000"
-          
-          # Final memory report
-          echo "📊 Final memory status:"
-          free -h
+          echo "✅ Deployment completed successfully!"
+          echo "🌐 Frontend URL: http://${{ secrets.DO_HOST }}:30000"
           echo "💾 Memory usage: $(free -m | awk 'NR==2{printf "%.1f%% used", $3*100/$2}')"
         
     - name: Deployment Success

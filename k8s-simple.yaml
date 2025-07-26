@@ -8,7 +8,7 @@ metadata:
   labels:
     app: todo-frontend
 spec:
-  replicas: 2
+  replicas: 1  # Single replica for 1GB VPS
   selector:
     matchLabels:
       app: todo-frontend
@@ -20,6 +20,7 @@ spec:
       containers:
       - name: frontend
         image: todo-frontend:latest
+        imagePullPolicy: Never  # Use local image only
         ports:
         - containerPort: 3000
         env:
