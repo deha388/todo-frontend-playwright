@@ -95,51 +95,13 @@ jobs:
         username: ${{ secrets.DO_USERNAME }}
         password: ${{ secrets.DO_PASSWORD }}
         script: |
-          echo "🔧 Setting up VPS infrastructure..."
+          echo "🚀 Starting deployment to production K3s cluster..."
           
-          # 1. Update system
-          echo "📦 Updating system packages..."
-          export DEBIAN_FRONTEND=noninteractive
-          apt update && apt upgrade -y
-          
-          # 2. Install Docker (if not exists)
-          if ! command -v docker &> /dev/null; then
-            echo "🐳 Installing Docker..."
-            apt install docker.io -y
-            systemctl start docker
-            systemctl enable docker
-            echo "✅ Docker installed"
-          else
-            echo "✅ Docker already installed"
-          fi
-          
-          # 3. Install K3s (if not exists)
-          if ! command -v k3s &> /dev/null; then
-            echo "☸️ Installing K3s..."
-            curl -sfL https://get.k3s.io | sh -
-            echo "✅ K3s installed"
-          else
-            echo "✅ K3s already installed"
-          fi
-          
-          # 4. Install Git (if not exists)
-          if ! command -v git &> /dev/null; then
-            echo "📚 Installing Git..."
-            apt install git -y
-            echo "✅ Git installed"
-          else
-            echo "✅ Git already installed"
-          fi
-          
-          # 5. Fix K3s if failed to start
-          echo "🔧 Ensuring K3s is running..."
-          systemctl restart k3s || echo "K3s restart attempted"
-          sleep 20
-          
-          # Check K3s status
-          systemctl status k3s --no-pager || echo "K3s status check"
-          
-          echo "🚀 Starting deployment process..."
+          # Verify prerequisites are installed
+          echo "✅ Checking prerequisites..."
+          docker --version
+          k3s kubectl version --client
+          git --version
           
           # Update project on server (fix path)
           cd /root

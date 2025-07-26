@@ -24,7 +24,7 @@ spec:
         - containerPort: 3000
         env:
         - name: NEXT_PUBLIC_API_URL
-          value: "http://todo-backend:8083"  # Update with your backend service
+          value: "http://todo-backend-service:8083"  # Internal K8s service
         resources:
           requests:
             memory: "128Mi"
