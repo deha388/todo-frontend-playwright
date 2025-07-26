@@ -125,13 +125,11 @@ jobs:
           docker system prune -af --volumes > /dev/null 2>&1
           sync && echo 3 > /proc/sys/vm/drop_caches
           
-          # Build with memory constraints (remove unsupported --cpus flag)
+          # Build without memory limits - let system manage memory naturally
           DOCKER_BUILDKIT=0 docker build \
-            --memory=300m \
-            --memory-swap=600m \
             --quiet \
             -t todo-frontend:${{ github.sha }} . || {
-            echo "❌ Build failed, retrying..."
+            echo "❌ Build failed, retrying with no cache..."
             docker system prune -af > /dev/null 2>&1
             DOCKER_BUILDKIT=0 docker build --no-cache -t todo-frontend:${{ github.sha }} .
           }

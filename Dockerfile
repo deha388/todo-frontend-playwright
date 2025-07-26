@@ -21,8 +21,7 @@ COPY . .
 # Disable Next.js telemetry to reduce log noise
 ENV NEXT_TELEMETRY_DISABLED 1
 
-# Build the application with memory constraints
-ENV NODE_OPTIONS="--max-old-space-size=2048"
+# Build the application - let Node.js manage memory naturally
 RUN npm run build
 
 # Production image, copy all the files and run next
