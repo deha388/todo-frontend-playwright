@@ -3,24 +3,26 @@ FROM node:18-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Install dependencies with memory optimization (quiet mode)
+# Install production dependencies only (for final runtime)
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production --no-audit --no-fund --maxsockets 1 --silent
+RUN npm ci --only=production --no-audit --no-fund --maxsockets 1 --silent --prefer-offline
 
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+# Install ALL dependencies (including devDependencies for TypeScript build)
+COPY package.json package-lock.json* ./
+RUN npm ci --no-audit --no-fund --maxsockets 1 --silent --prefer-offline
 COPY . .
 
 # Disable Next.js telemetry to reduce log noise
 ENV NEXT_TELEMETRY_DISABLED 1
 
-# Build the application
+# Build the application with memory constraints
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 RUN npm run build
 
 # Production image, copy all the files and run next
@@ -42,11 +44,6 @@ RUN chown nextjs:nodejs .next
 # https://nextjs.org/docs/advanced-features/output-file-tracing
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-# Alternative: If standalone doesn't work, use traditional approach
-# COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
-# COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-# COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
 USER nextjs
 

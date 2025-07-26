@@ -103,6 +103,14 @@ jobs:
           echo "💾 Memory: $(free -h | awk '/^Mem:/{printf "%s used, %s available", $3, $7}')"
           echo "✅ Prerequisites: Docker $(docker --version | cut -d' ' -f3), K3s $(k3s kubectl version --client 2>/dev/null | grep 'Client Version' | cut -d' ' -f3 || echo 'OK'), Git OK"
           
+          # 🧹 CLEANUP: Remove old deployments to prevent memory issues
+          echo "🧹 Cleaning old frontend deployments..."
+          k3s kubectl delete deployment todo-frontend --ignore-not-found=true
+          k3s kubectl delete service todo-frontend-service --ignore-not-found=true
+          echo "🧹 Cleaning old Docker images..."
+          docker images | grep todo-frontend | awk '{print $3}' | xargs -r docker rmi -f 2>/dev/null || echo "No old images to remove"
+          docker system prune -f > /dev/null 2>&1
+          
           # Update project on server (quiet mode)
           cd /root
           rm -rf todo-frontend-playwright || true
