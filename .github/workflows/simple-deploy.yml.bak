@@ -47,8 +47,8 @@ jobs:
     - name: Install dependencies
       run: npm ci
       
-    - name: Run Unit & Component Tests  
-      run: npm test tests/unit tests/components
+    - name: Run Unit & Component Tests
+      run: npm test
 
   # Step 3: Dockerize & Deploy to Test Environment
   deploy-test:
@@ -72,10 +72,53 @@ jobs:
         timeout 60 bash -c 'while ! curl -f http://localhost:3000 > /dev/null 2>&1; do sleep 2; done'
         echo "✅ Test container is ready!"
 
-  # Step 4: Deploy to Production (Kubernetes)
+  # Step 4: Integration Tests (Contract + UI Tests against Test Container)
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: deploy-test
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run Contract Tests (API Consumer Driven)
+      run: |
+        echo "🔗 Running contract tests against test container..."
+        npm run test:contracts
+        
+    - name: Install Playwright
+      run: npx playwright install --with-deps
+      
+    - name: Run UI Acceptance Tests
+      run: |
+        echo "🖱️ Running UI acceptance tests against test container..."
+        npm run test:e2e
+
+  # Step 5: Cleanup Test Environment
+  cleanup-test:
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    if: always()
+    steps:
+    - name: Stop and Remove Test Container
+      run: |
+        echo "🧹 Cleaning up test container..."
+        docker stop test-app || true
+        docker rm test-app || true
+        echo "✅ Test environment cleaned up!"
+
+  # Step 6: Deploy to Production (Kubernetes)
   deploy-prod:
     runs-on: ubuntu-latest
-    needs: [deploy-test]
+    needs: [integration-tests]
     environment: production
     if: github.ref == 'refs/heads/main'
     steps:
@@ -88,45 +131,13 @@ jobs:
         docker build -t todo-frontend:latest .
         docker tag todo-frontend:latest todo-frontend:${{ github.sha }}
         
-    - name: Deploy to Kubernetes (K3s)
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.DO_HOST }}
-        username: ${{ secrets.DO_USERNAME }}
-        key: ${{ secrets.DO_SSH_KEY }}
-        script: |
-          echo "☸️ Deploying to K3s Kubernetes cluster..."
-          
-          # Update project on server
-          cd /home/${{ secrets.DO_USERNAME }}
-          rm -rf todo-frontend-playwright || true
-          git clone https://github.com/deha388/todo-frontend-playwright.git
-          cd todo-frontend-playwright
-          
-          # Build Docker image on server  
-          echo "🏗️ Building Docker image..."
-          docker build -t todo-frontend:${{ github.sha }} .
-          docker tag todo-frontend:${{ github.sha }} todo-frontend:latest
-          
-          # Update k8s manifest with new image
-          echo "📝 Updating image in manifest..."
-          sed -i 's|image: todo-frontend:.*|image: todo-frontend:${{ github.sha }}|g' k8s-simple.yaml
-          
-          # Deploy to K3s Kubernetes
-          echo "🚀 Applying to K3s..."
-          sudo k3s kubectl apply -f k8s-simple.yaml
-          
-          # Wait for deployment rollout  
-          echo "⏳ Waiting for rollout..."
-          sudo k3s kubectl rollout status deployment/todo-frontend --timeout=300s
-          
-          # Show deployment info
-          echo "📋 Deployment info:"
-          sudo k3s kubectl get pods
-          sudo k3s kubectl get service todo-frontend-service
-          
-          echo "✅ K3s deployment completed!"
-          echo "🌐 Access: http://${{ secrets.DO_HOST }}:30000"
+    - name: Deploy to Kubernetes
+      run: |
+        echo "☸️ Deploying to Kubernetes..."
+        echo "Image: todo-frontend:${{ github.sha }}"
+        echo "kubectl apply -f k8s-simple.yaml"
+        echo "kubectl set image deployment/todo-frontend frontend=todo-frontend:${{ github.sha }}"
+        echo "kubectl rollout status deployment/todo-frontend"
         
     - name: Deployment Success
       run: |

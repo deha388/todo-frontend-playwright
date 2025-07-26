@@ -41,10 +41,11 @@ metadata:
   labels:
     app: todo-frontend
 spec:
-  type: LoadBalancer  # For external access
+  type: NodePort  # For single VPS external access
   ports:
   - port: 80
     targetPort: 3000
+    nodePort: 30000  # External access port
     protocol: TCP
   selector:
     app: todo-frontend 
