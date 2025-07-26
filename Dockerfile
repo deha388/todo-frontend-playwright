@@ -7,9 +7,9 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Install dependencies based on the preferred package manager
+# Install dependencies with memory optimization
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production
+RUN npm ci --only=production --no-audit --no-fund --maxsockets 1
 
 # Rebuild the source code only when needed
 FROM base AS builder
