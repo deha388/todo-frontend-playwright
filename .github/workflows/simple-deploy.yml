@@ -131,21 +131,34 @@ jobs:
             echo "✅ Git already installed"
           fi
           
-          # 5. Wait for K3s to be ready
-          echo "⏳ Waiting for K3s to be ready..."
-          sleep 10
+          # 5. Fix K3s if failed to start
+          echo "🔧 Ensuring K3s is running..."
+          systemctl restart k3s || echo "K3s restart attempted"
+          sleep 20
+          
+          # Check K3s status
+          systemctl status k3s --no-pager || echo "K3s status check"
           
           echo "🚀 Starting deployment process..."
           
-          # Update project on server
-          cd /home/root
+          # Update project on server (fix path)
+          cd /root
           rm -rf todo-frontend-playwright || true
           git clone https://github.com/deha388/todo-frontend-playwright.git
           cd todo-frontend-playwright
           
-          # Build Docker image on server  
+          # Build Docker image on server (with memory optimization)
           echo "🏗️ Building Docker image..."
-          docker build -t todo-frontend:${{ github.sha }} .
+          
+          # Clear Docker cache to free memory
+          docker system prune -f || echo "Docker cleanup attempted"
+          
+          # Build with memory limits and cleanup
+          docker build --memory=400m --memory-swap=800m -t todo-frontend:${{ github.sha }} . || {
+            echo "❌ Docker build failed, trying with basic build..."
+            docker build -t todo-frontend:${{ github.sha }} .
+          }
+          
           docker tag todo-frontend:${{ github.sha }} todo-frontend:latest
           
           # Update k8s manifest with new image
