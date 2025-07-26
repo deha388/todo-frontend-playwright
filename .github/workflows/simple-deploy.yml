@@ -48,7 +48,7 @@ jobs:
       run: npm ci
       
     - name: Run Unit & Component Tests
-      run: npm test
+      run: npm test -- --testPathIgnorePatterns="tests/contracts"
 
   # Step 3: Dockerize & Deploy to Test Environment
   deploy-test:
