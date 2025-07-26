@@ -1,0 +1,83 @@
+{
+  "consumer": {
+    "name": "TodoFrontend"
+  },
+  "interactions": [
+    {
+      "description": "a request for all todos",
+      "providerState": "no todos exist",
+      "request": {
+        "method": "GET",
+        "path": "/api/todos"
+      },
+      "response": {
+        "body": [],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "status": 200
+      }
+    },
+    {
+      "description": "a request for all todos",
+      "providerState": "todos exist",
+      "request": {
+        "method": "GET",
+        "path": "/api/todos"
+      },
+      "response": {
+        "body": [
+          {
+            "createdAt": "2024-01-01T10:00:00.000Z",
+            "id": "uuid-123",
+            "text": "buy some milk"
+          }
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "status": 200
+      }
+    },
+    {
+      "description": "a request to create a todo",
+      "providerState": "backend is ready to create todos",
+      "request": {
+        "body": {
+          "text": "buy some milk"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/api/todos"
+      },
+      "response": {
+        "body": {
+          "createdAt": "2024-01-01T10:00:00.000Z",
+          "id": "uuid-456",
+          "text": "buy some milk"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "status": 201
+      }
+    }
+  ],
+  "metadata": {
+    "pact-js": {
+      "version": "15.0.1"
+    },
+    "pactRust": {
+      "ffi": "0.4.22",
+      "models": "1.2.3"
+    },
+    "pactSpecification": {
+      "version": "2.0.0"
+    }
+  },
+  "provider": {
+    "name": "TodoBackend"
+  }
+}
