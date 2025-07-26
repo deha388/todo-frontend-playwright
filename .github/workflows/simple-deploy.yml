@@ -101,7 +101,7 @@ jobs:
           
           # System status check
           echo "💾 Memory: $(free -h | awk '/^Mem:/{printf "%s used, %s available", $3, $7}')"
-          echo "✅ Prerequisites: Docker $(docker --version | cut -d' ' -f3), K3s $(k3s kubectl version --client --short | cut -d' ' -f3), Git OK"
+          echo "✅ Prerequisites: Docker $(docker --version | cut -d' ' -f3), K3s $(k3s kubectl version --client 2>/dev/null | grep 'Client Version' | cut -d' ' -f3 || echo 'OK'), Git OK"
           
           # Update project on server (quiet mode)
           cd /root
@@ -130,6 +130,10 @@ jobs:
           
           docker tag todo-frontend:${{ github.sha }} todo-frontend:latest
           
+          # Import image to K3s (fix ImageNeverPull issue)
+          echo "📥 Importing image to K3s..."
+          docker save todo-frontend:latest | sudo k3s ctr -n k8s.io images import -
+          
           # Immediate cleanup after build to free memory
           echo "🧹 Post-build cleanup..."
           docker system prune -f > /dev/null 2>&1
@@ -137,9 +141,9 @@ jobs:
           
           echo "💾 Available memory: $(free -h | awk '/^Mem:/{print $7}')"
           
-          # Update k8s manifest with new image
-          echo "📝 Updating image in manifest..."
-          sed -i 's|image: todo-frontend:.*|image: todo-frontend:${{ github.sha }}|g' k8s-simple.yaml
+          # Update k8s manifest to use latest tag
+          echo "📝 Using latest image tag in manifest..."
+          sed -i 's|image: todo-frontend:.*|image: todo-frontend:latest|g' k8s-simple.yaml
           
           # Deploy to K3s Kubernetes
           echo "🚀 Applying to K3s..."

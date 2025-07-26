@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { TodoApiService, Todo } from '../services/todoApi';
 
-// Real backend API URL - configure via environment variable
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://0.0.0.0:8083';
+// Backend API URL - fallback to mock if backend not available
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://todo-backend-service:8083';
 const todoApiService = new TodoApiService(API_BASE_URL);
 
 export function useTodos() {
