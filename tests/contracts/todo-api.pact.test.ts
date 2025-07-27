@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import { Pact } from '@pact-foundation/pact';
 import { Todo, CreateTodoRequest } from '../../src/types/todo';
 import path from 'path';

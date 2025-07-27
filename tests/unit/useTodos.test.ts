@@ -1,21 +1,23 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useTodos } from '../../src/hooks/useTodos';
 
-// Mock the API service
-jest.mock('../../src/services/todoApi', () => ({
-  TodoApiService: jest.fn().mockImplementation(() => ({
-    getTodos: jest.fn().mockResolvedValue([]),
-    createTodo: jest.fn().mockImplementation(({ text }: { text: string }) => 
-      Promise.resolve({
-        id: 'test-uuid',
-        text,
-        createdAt: new Date('2024-01-01T10:00:00.000Z')
-      })
-    )
-  }))
-}));
+// Mock fetch calls to /api/todos endpoint
 
 describe('useTodos Hook - Business Logic', () => {
+  let fetchSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    // Mock fetch with jest.spyOn (cleaner than global mock)
+    fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => []
+    } as Response);
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
+  });
+
   test('todo list starts empty', async () => {
     // Given: useTodos hook is initialized
     const { result } = renderHook(() => useTodos());
@@ -39,6 +41,16 @@ describe('useTodos Hook - Business Logic', () => {
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
     });
+    
+    // Mock POST /api/todos response for addTodo call
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        id: 'test-uuid',
+        text: 'buy some milk',
+        createdAt: '2024-01-01T10:00:00.000Z'
+      })
+    } as Response);
     
     // When: A new todo is added
     await act(async () => {
@@ -67,6 +79,25 @@ describe('useTodos Hook - Business Logic', () => {
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
     });
+
+    // Mock POST responses for both todos (in order they'll be called)
+    fetchSpy
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 'test-uuid-1',
+          text: 'buy some milk',
+          createdAt: '2024-01-01T10:00:00.000Z'
+        })
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 'test-uuid-2',
+          text: 'walk the dog',  
+          createdAt: '2024-01-01T10:05:00.000Z'
+        })
+      } as Response);
     
     // When: Multiple todos are added
     await act(async () => {
