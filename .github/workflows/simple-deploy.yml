@@ -47,8 +47,8 @@ jobs:
     - name: Install dependencies
       run: npm ci
       
-    - name: Run All Tests (Unit, Component, Contract)
-      run: npm test
+    - name: Run Tests (Unit & Component - Contract tests need mock server)
+      run: npm test tests/unit tests/components
       
     - name: Install Playwright
       run: npx playwright install --with-deps
