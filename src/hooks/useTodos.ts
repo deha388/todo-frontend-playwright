@@ -1,9 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TodoApiService, Todo } from '../services/todoApi';
-
-// Use Next.js API routes for server-side proxy to backend
-const API_BASE_URL = ''; // Empty for same-origin requests to /api/*
-const todoApiService = new TodoApiService(API_BASE_URL);
+import { Todo } from '../types/todo';
 
 export function useTodos() {
   // State: todos starts empty, loading state
@@ -15,7 +11,15 @@ export function useTodos() {
     const loadTodos = async () => {
       try {
         setLoading(true);
-        const todosFromApi = await todoApiService.getTodos();
+        const response = await fetch('/api/todos');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const todos = await response.json();
+        const todosFromApi = todos.map((todo: any) => ({
+          ...todo,
+          createdAt: new Date(todo.createdAt)
+        }));
         setTodos(todosFromApi);
       } catch (error) {
         console.error('Failed to load todos:', error);
@@ -31,7 +35,23 @@ export function useTodos() {
   const addTodo = async (text: string) => {
     try {
       setLoading(true);
-      const newTodo = await todoApiService.createTodo({ text });
+      const response = await fetch('/api/todos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const todo = await response.json();
+      const newTodo = {
+        ...todo,
+        createdAt: new Date(todo.createdAt)
+      };
       setTodos(prevTodos => [...prevTodos, newTodo]);
     } catch (error) {
       console.error('Failed to add todo:', error);

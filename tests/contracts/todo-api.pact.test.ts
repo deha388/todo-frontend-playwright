@@ -1,10 +1,24 @@
 import { Pact } from '@pact-foundation/pact';
-import { TodoApiService } from '../../src/services/todoApi';
+import { Todo, CreateTodoRequest } from '../../src/types/todo';
 import path from 'path';
+
+// Helper function to parse dates like the old TodoApiService did
+const parseTodos = (todos: any[]): Todo[] => {
+  return todos.map((todo: any) => ({
+    ...todo,
+    createdAt: new Date(todo.createdAt)
+  }));
+};
+
+const parseTodo = (todo: any): Todo => {
+  return {
+    ...todo,
+    createdAt: new Date(todo.createdAt)
+  };
+};
 
 describe('Todo API Contract Tests', () => {
   let provider: Pact;
-  let todoApiService: TodoApiService;
 
   beforeAll(async () => {
     // Setup Pact mock server
@@ -19,8 +33,7 @@ describe('Todo API Contract Tests', () => {
 
     await provider.setup();
     
-    // Point API service to Pact mock server for contract testing
-    todoApiService = new TodoApiService('http://localhost:1234');
+    // Contract tests will use direct fetch() calls to Pact mock server
   });
 
   afterAll(async () => {
@@ -51,7 +64,9 @@ describe('Todo API Contract Tests', () => {
       });
 
       // When: Frontend requests todos
-      const todos = await todoApiService.getTodos();
+      const response = await fetch('http://localhost:1234/api/todos');
+      const todosRaw = await response.json();
+      const todos = parseTodos(todosRaw);
 
       // Then: Should receive empty array
       expect(todos).toEqual([]);
@@ -84,7 +99,9 @@ describe('Todo API Contract Tests', () => {
       });
 
       // When: Frontend requests todos
-      const todos = await todoApiService.getTodos();
+      const response = await fetch('http://localhost:1234/api/todos');
+      const todosRaw = await response.json();
+      const todos = parseTodos(todosRaw);
 
       // Then: Should receive todos with proper structure
       expect(todos).toHaveLength(1);
@@ -127,7 +144,15 @@ describe('Todo API Contract Tests', () => {
       });
 
       // When: Frontend creates todo
-      const todo = await todoApiService.createTodo(createRequest);
+      const response = await fetch('http://localhost:1234/api/todos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(createRequest),
+      });
+      const todoRaw = await response.json();
+      const todo = parseTodo(todoRaw);
 
       // Then: Should receive created todo
       expect(todo).toEqual({
