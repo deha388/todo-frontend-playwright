@@ -64,8 +64,8 @@ jobs:
         host: ${{ secrets.DO_HOST }}
         username: ${{ secrets.DO_USERNAME }}
         password: ${{ secrets.DO_PASSWORD }}
-        timeout: 20m
-        command_timeout: 15m
+        timeout: 25m
+        command_timeout: 20m
         script: |
           echo "🚀 Building and testing on VPS (internal network access)..."
           
@@ -96,6 +96,26 @@ jobs:
           # Run E2E tests against test container
           echo "🖱️ Running E2E tests..."
           PLAYWRIGHT_BASE_URL=http://localhost:3001 npx playwright test
+          
+          # Run contract tests with Pact mock server
+          echo "🔗 Running API contract tests with Pact mock server..."
+          
+          # Create pacts and logs directories
+          mkdir -p pacts logs
+          
+          # Set NODE_ENV for contract tests
+          export NODE_ENV=test
+          
+          # Run contract tests (Pact will start/stop its own mock server)
+          npm run test:contracts
+          
+          # Show generated pact file if exists
+          if [ -f "pacts/TodoFrontend-TodoBackend.json" ]; then
+            echo "✅ Pact contract file generated:"
+            ls -la pacts/
+          else
+            echo "⚠️ No pact file generated"
+          fi
           
           # Cleanup
           echo "🧹 Cleaning up test container..."
