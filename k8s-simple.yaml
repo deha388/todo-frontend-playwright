@@ -24,8 +24,8 @@ spec:
         ports:
         - containerPort: 3000
         env:
-        - name: NEXT_PUBLIC_API_URL
-          value: "http://todo-backend-service:8083"  # Internal K8s service
+        - name: BACKEND_URL
+          value: "http://todo-backend-service:8083"  # Internal K8s service for server-side proxy
         resources:
           requests:
             memory: "128Mi"

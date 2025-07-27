@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { TodoApiService, Todo } from '../services/todoApi';
 
-// Backend API URL - fallback to mock if backend not available
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://todo-backend-service:8083';
+// Use Next.js API routes for server-side proxy to backend
+const API_BASE_URL = ''; // Empty for same-origin requests to /api/*
 const todoApiService = new TodoApiService(API_BASE_URL);
 
 export function useTodos() {
